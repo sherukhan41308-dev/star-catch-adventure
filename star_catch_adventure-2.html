@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Star Catch Adventure</title>
+<style>
+:root{--gold:#ffda69;--ink:#172344}*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(circle at 50% 0%,#566cc1,#20274f 58%,#10172e);font-family:system-ui,Arial;color:white;min-height:100vh;display:flex;justify-content:center;align-items:center}
+main{width:min(96vw,560px);padding:10px}
+header{text-align:center;margin-bottom:9px}h1{font-size:27px;margin:0;text-shadow:0 3px 0 #26355d,0 5px 14px #0008}.tag{font-size:12px;color:#d9e4ff}
+.panel{background:linear-gradient(145deg,#314777,#182744);border:1px solid #7890c7;border-radius:22px;padding:11px;box-shadow:0 16px 40px #0007}
+.top{display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:8px}.pill{background:#ffffff18;border:1px solid #ffffff26;border-radius:12px;padding:7px 10px;font-weight:800;font-size:13px}
+#game{width:100%;height:min(54vh,410px);min-height:285px;display:block;border-radius:16px;border:1px solid #8ba2d6;touch-action:none;background:#1a3971}
+.progress{height:9px;background:#ffffff26;border-radius:20px;overflow:hidden;margin:8px 1px}.bar{height:100%;width:0;background:linear-gradient(90deg,#62f3ff,#ffe16b);transition:width .15s}
+.actions{display:flex;flex-wrap:wrap;justify-content:center;gap:7px}
+button{border:0;border-radius:13px;padding:10px 15px;font-size:14px;font-weight:850;color:#25304d;background:linear-gradient(#fff0a2,#ffc33e);box-shadow:0 4px 0 #a86a1b;margin:3px}
+button.secondary{background:linear-gradient(#d5eaff,#7ebdff);box-shadow:0 4px 0 #386da8}
+button.pink{background:linear-gradient(#ffd2f0,#f18ad2);box-shadow:0 4px 0 #a7488a}
+button:disabled{opacity:.45;filter:grayscale(.4)}
+#message{text-align:center;min-height:24px;font-weight:800;color:#fff3b5;margin:5px 0;font-size:14px}
+#shop{display:none;margin-top:10px;background:#101d38;border:1px solid #637cad;border-radius:16px;padding:10px}
+.shopgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.item{background:#ffffff12;border:1px solid #ffffff24;border-radius:12px;padding:9px;text-align:center;font-size:13px}
+.item .emoji{font-size:28px}.item button{width:100%;padding:8px 4px}
+#levelPicker{display:none;margin-top:9px;background:#101d38;border-radius:14px;padding:9px}
+.levelgrid{display:grid;grid-template-columns:repeat(6,1fr);gap:5px}.levelgrid button{padding:8px 0;margin:0}
+.small{font-size:11px;color:#c9d7f7;text-align:center;margin:7px 2px 1px}
+</style>
+</head>
+<body><main>
+<header><h1>🌟 Star Catch Adventure</h1><div class="tag">सितारे पकड़ो • कॉइन कमाओ • अपनी टोकरी सजाओ</div></header>
+<section class="panel">
+ <div class="top">
+  <div class="pill" id="levelLabel">लेवल 1 / 50</div>
+  <div class="pill">🪙 <span id="coins">0</span></div>
+  <div class="pill">❤️ <span id="lives">3</span></div>
+  <button class="secondary" id="musicBtn">♫</button>
+ </div>
+ <canvas id="game" width="480" height="500"></canvas>
+ <div class="progress"><div class="bar" id="bar"></div></div>
+ <div class="top"><div class="pill">⭐ <span id="score">0</span> / <span id="goal">12</span></div><div class="pill">🏆 बेस्ट <span id="best">0</span></div></div>
+ <div id="message">स्टार्ट दबाओ और सितारे पकड़ो!</div>
+ <div class="actions">
+  <button id="mainBtn">▶ गेम शुरू</button>
+  <button class="secondary" id="shopBtn">🛒 दुकान</button>
+  <button class="pink" id="levelsBtn">🗺️ लेवल</button>
+ </div>
+ <div id="shop">
+  <b>🛍️ अपनी टोकरी चुनो</b><div class="small">कॉइन कमाकर नई टोकरी या थाली खरीदो। खरीदी हुई चीज़ चुनकर खेलो।</div>
+  <div class="shopgrid" id="shopGrid"></div>
+ </div>
+ <div id="levelPicker"><b>🗺️ लेवल चुनो</b><div class="small">पहले वाले लेवल पूरे करके नए लेवल खोलो।</div><div class="levelgrid" id="levelGrid"></div></div>
+ <div class="small">हर पकड़े गए सितारे पर 3 कॉइन • हर 10 लेवल पर नई खास स्किन • बम से बचो!</div>
+</section>
+</main>
+<script>
+const $=id=>document.getElementById(id),cv=$('game'),ctx=cv.getContext('2d');
+const catalog=[
+ {id:'basket',name:'लकड़ी की टोकरी',emoji:'🧺',cost:0,color:'#d99b42',kind:'basket'},
+ {id:'blue',name:'नीली टोकरी',emoji:'🧺',cost:35,color:'#46a9ff',kind:'basket'},
+ {id:'gold',name:'गोल्ड टोकरी',emoji:'🏆',cost:75,color:'#ffd34f',kind:'basket'},
+ {id:'plate',name:'चमकदार थाली',emoji:'🥏',cost:110,color:'#c9e7ff',kind:'plate'},
+ {id:'rainbow',name:'रेनबो कैचर',emoji:'🌈',cost:160,color:'#ee82db',kind:'rainbow'},
+ {id:'diamond',name:'डायमंड थाली',emoji:'💎',cost:230,color:'#7ff3ef',kind:'plate'}
+];
+let coins=Number(localStorage.getItem('scaCoins')||0),unlocked=Number(localStorage.getItem('scaUnlocked')||1),best=Number(localStorage.getItem('scaBest')||0),owned=JSON.parse(localStorage.getItem('scaOwned')||'["basket"]'),equipped=localStorage.getItem('scaEquipped')||'basket';
+let level=1,score=0,goal=12,lives=3,running=false,state='ready',items=[],particles=[],last=0,spawn=0,audio=null,music=false,musicTimer=null,note=0;
+let player={x:190,y:452,w:100,h:24};
+const notes=[523,659,784,659,587,698,880,698];
+function save(){localStorage.setItem('scaCoins',coins);localStorage.setItem('scaUnlocked',unlocked);localStorage.setItem('scaBest',best);localStorage.setItem('scaOwned',JSON.stringify(owned));localStorage.setItem('scaEquipped',equipped)}
+function ui(){$('coins').textContent=coins;$('lives').textContent=lives;$('levelLabel').textContent='लेवल '+level+' / 50';$('score').textContent=score;$('goal').textContent=goal;$('best').textContent=best;$('bar').style.width=Math.min(100,score/goal*100)+'%'}
+function audioReady(){if(!audio)audio=new(window.AudioContext||window.webkitAudioContext)();if(audio.state==='suspended')audio.resume()}
+function tone(f,d=.12,type='sine',v=.035){if(!audio)return;let o=audio.createOscillator(),g=audio.createGain();o.type=type;o.frequency.value=f;g.gain.setValueAtTime(v,audio.currentTime);g.gain.exponentialRampToValueAtTime(.001,audio.currentTime+d);o.connect(g);g.connect(audio.destination);o.start();o.stop(audio.currentTime+d)}
+function musicStep(){if(!music)return;tone(notes[note++%8],.23,'sine',.018);musicTimer=setTimeout(musicStep,300)}
+$('musicBtn').onclick=()=>{audioReady();music=!music;$('musicBtn').textContent=music?'♫ ON':'♫';if(music)musicStep();else clearTimeout(musicTimer)};
+function makeLevel(){goal=12+Math.floor((level-1)*1.8);score=0;lives=3;items=[];particles=[];spawn=0;state='ready';running=false;ui();$('message').textContent='लेवल '+level+' — '+goal+' सितारे पकड़ो!';$('mainBtn').textContent='▶ लेवल शुरू';draw()}
+function begin(){audioReady();if(level>unlocked)level=unlocked;score=0;lives=3;items=[];particles=[];spawn=0;running=true;state='play';ui();$('message').textContent='शाबाश! सितारे पकड़ो और बम से बचो।';$('mainBtn').textContent='खेल जारी';last=performance.now();requestAnimationFrame(loop)}
+function win(){running=false;state='won';unlocked=Math.max(unlocked,Math.min(50,level+1));let reward=15+Math.floor(level/5)*2;coins+=reward;let milestone='';if(level%10===0){let skin='skin'+level;if(!owned.includes(skin)){owned.push(skin);milestone=' 🎁 खास स्किन मिली!'} }
+if(score>best)best=score;save();ui();$('message').textContent='🎉 लेवल पूरा! +'+reward+' कॉइन।'+milestone;$('mainBtn').textContent=level>=50?'🏆 फिर से खेलो':'➡️ अगला लेवल';draw();renderShop();renderLevels()}
+function fail(){running=false;state='lost';$('message').textContent='कोई बात नहीं! फिर कोशिश करो।';$('mainBtn').textContent='↻ दोबारा खेलो';draw()}
+function advance(){if(state==='won'&&level<50){level++;makeLevel();$('message').textContent='अगला लेवल '+level+' खुल गया!';}else if(state==='won'&&level===50){level=1;makeLevel()}else if(state==='lost'){makeLevel()}begin()}
+$('mainBtn').onclick=()=>{if(state==='won'||state==='lost')advance();else if(state==='ready')begin()};
+function renderShop(){let grid=$('shopGrid');grid.innerHTML='';catalog.concat([10,20,30,40,50].map(n=>({id:'skin'+n,name:'लेवल '+n+' स्टार स्किन',emoji:'🌟',cost:0,color:'#ffb9ed',kind:'special',unlock:n}))).forEach(it=>{
+ let ownedIt=owned.includes(it.id)||(it.unlock&&unlocked>it.unlock);
+ let div=document.createElement('div');div.className='item';div.innerHTML='<div class="emoji">'+it.emoji+'</div><b>'+it.name+'</b><div>'+ (it.unlock?'लेवल '+it.unlock पूरा करो':it.cost?it.cost+' 🪙':'मुफ्त')+'</div>';
+ let b=document.createElement('button');if(ownedIt){b.textContent=equipped===it.id?'✓ चुना हुआ':'इस्तेमाल करो';b.disabled=equipped===it.id;b.onclick=()=>{equipped=it.id;save();renderShop();draw()}}
+ else{b.textContent=it.unlock?'🔒 लॉक':'खरीदो';b.disabled=it.unlock?unlocked<=it.unlock:coins<it.cost;b.onclick=()=>{if(coins>=it.cost){coins-=it.cost;owned.push(it.id);equipped=it.id;save();ui();renderShop();draw()}}}
+ div.appendChild(b);grid.appendChild(div);
+})}
+function renderLevels(){let g=$('levelGrid');g.innerHTML='';for(let i=1;i<=50;i++){let b=document.createElement('button');b.textContent=i;b.disabled=i>unlocked;b.className=i===level?'pink':'';b.onclick=()=>{level=i;makeLevel();$('levelPicker').style.display='none'};g.appendChild(b)}}
+$('shopBtn').onclick=()=>{$('shop').style.display=$('shop').style.display==='block'?'none':'block';renderShop()};
+$('levelsBtn').onclick=()=>{$('levelPicker').style.display=$('levelPicker').style.display==='block'?'none':'block';renderLevels()};
+function drawBackground(){let hue=(level*17)%360;let g=ctx.createLinearGradient(0,0,0,500);g.addColorStop(0,`hsl(${210+hue%35},65%,26%)`);g.addColorStop(1,`hsl(${235+hue%30},55%,15%)`);ctx.fillStyle=g;ctx.fillRect(0,0,480,500);
+for(let i=0;i<38;i++){let x=(i*91+level*7)%480,y=(i*137)%500;ctx.fillStyle=i%4?'#ffffff45':'#fff2a8';ctx.beginPath();ctx.arc(x,y,i%4===0?2:1,0,Math.PI*2);ctx.fill()}}
+const pal=[['#ff548c','#ffd0df','#a80048'],['#31d7ff','#d4fbff','#0676a8'],['#a66bff','#ead7ff','#4d219e'],['#48e59a','#d4ffe5','#087b4b'],['#ffbb39','#fff1b0','#9c4800']];
+function drawStar(x,y,r,c,rot){let p=pal[c];ctx.save();ctx.translate(x,y);ctx.rotate(rot);ctx.shadowColor=p[0];ctx.shadowBlur=18;ctx.beginPath();for(let i=0;i<10;i++){let a=-Math.PI/2+i*Math.PI/5,rr=i%2?r*.45:r;i?ctx.lineTo(Math.cos(a)*rr,Math.sin(a)*rr):ctx.moveTo(Math.cos(a)*rr,Math.sin(a)*rr)}ctx.closePath();let gr=ctx.createLinearGradient(-r,-r,r,r);gr.addColorStop(0,'white');gr.addColorStop(.25,p[1]);gr.addColorStop(.7,p[0]);gr.addColorStop(1,p[2]);ctx.fillStyle=gr;ctx.fill();ctx.strokeStyle='#ffffffaa';ctx.lineWidth=2;ctx.stroke();ctx.restore()}
+function drawItem(it){if(it.type==='bomb'){ctx.font='30px sans-serif';ctx.textAlign='center';ctx.fillText('💣',it.x,it.y+10)}else drawStar(it.x,it.y,it.r,it.color,it.rot)}
+function drawPlayer(){let it=catalog.find(x=>x.id===equipped)||{color:'#d99b42',kind:'basket'};ctx.save();ctx.shadowColor='#0009';ctx.shadowBlur=12;if(it.kind==='plate'){let gr=ctx.createLinearGradient(0,player.y,0,player.y+30);gr.addColorStop(0,'#fff');gr.addColorStop(.5,it.color);gr.addColorStop(1,'#4e7eaa');ctx.fillStyle=gr;ctx.beginPath();ctx.ellipse(player.x+player.w/2,player.y+12,player.w/2,13,0,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#ffffff';ctx.lineWidth=3;ctx.stroke()}else{ctx.fillStyle=it.kind==='rainbow'?'#ee82db':it.color;ctx.beginPath();ctx.roundRect(player.x,player.y,player.w,25,10);ctx.fill();ctx.strokeStyle='#fff9';ctx.lineWidth=3;ctx.stroke();ctx.fillStyle='#ffffff70';ctx.fillRect(player.x+12,player.y+5,player.w-24,4)}ctx.restore()}
+function draw(){drawBackground();items.forEach(drawItem);drawPlayer();if(!running){ctx.fillStyle='#fff';ctx.textAlign='center';ctx.font='bold 28px system-ui';let t=state==='won'?'🎉 लेवल पूरा!':state==='lost'?'फिर कोशिश करो':'चलो खेलें!';ctx.fillText(t,240,220);ctx.font='17px system-ui';ctx.fillText(state==='won'?'अगले लेवल के लिए NEXT दबाओ':'सितारे पकड़ो, कॉइन कमाओ!',240,255)}}
+function burst(x,y){for(let i=0;i<8;i++)particles.push({x,y,vx:(Math.random()-.5)*160,vy:(Math.random()-.8)*150,t:.45})}
+function loop(ts){if(!running)return;let dt=Math.min((ts-last)/1000,.04);last=ts;spawn+=dt;let speed=145+level*5,interval=Math.max(.24,.82-level*.011),bombChance=Math.min(.23,.035+level*.0035);
+if(spawn>interval){let bomb=Math.random()<bombChance;items.push({type:bomb?'bomb':'star',x:20+Math.random()*440,y:-20,r:13+Math.random()*7,speed:speed+Math.random()*65,color:Math.floor(Math.random()*5),rot:Math.random(),spin:(Math.random()-.5)*2});spawn=0}
+for(let i=items.length-1;i>=0;i--){let it=items[i];it.y+=it.speed*dt;it.rot+=it.spin*dt;if(it.y>player.y-3&&it.y<player.y+32&&it.x>player.x-5&&it.x<player.x+player.w+5){items.splice(i,1);if(it.type==='bomb'){lives--;tone(160,.2,'sawtooth',.04);ui();if(lives<=0){fail();return}}else{score++;coins+=3;burst(it.x,it.y);tone(880,.08,'triangle',.05);if(score>best)best=score;save();ui();$('bar').style.width=Math.min(100,score/goal*100)+'%';if(score>=goal){win();return}}}else if(it.y>520){items.splice(i,1);if(it.type==='star'){lives--;ui();if(lives<=0){fail();return}}}}
+for(let i=particles.length-1;i>=0;i--){let p=particles[i];p.x+=p.vx*dt;p.y+=p.vy*dt;p.t-=dt;if(p.t<=0)particles.splice(i,1);else{ctx.fillStyle='#ffe16b';ctx.fillRect(p.x,p.y,4,4)}}
+draw();requestAnimationFrame(loop)}
+function move(x){let r=cv.getBoundingClientRect();player.x=Math.max(0,Math.min(480-player.w,(x-r.left)*480/r.width-player.w/2));if(!running)draw()}
+cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);move(e.clientX)});cv.addEventListener('pointermove',e=>{if(e.buttons||e.pointerType==='touch')move(e.clientX)});
+ui();makeLevel();renderShop();renderLevels();
+</script></body></html>
